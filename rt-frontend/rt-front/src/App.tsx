@@ -3,18 +3,21 @@ import './App.css';
 import ProductCard from './components/ProductCard';
 import ProductModal from './components/ProductModal';
 import Cart from './components/Cart';
+import Footer from './components/Footer';
 import ClickAwayListener from '@mui/material/ClickAwayListener';
+import Modal from '@mui/material/Modal';
+import Box from '@mui/material/Box';
 import Timeline from '@mui/lab/Timeline';
 import TimelineItem from '@mui/lab/TimelineItem';
 import TimelineSeparator from '@mui/lab/TimelineSeparator';
 import TimelineConnector from '@mui/lab/TimelineConnector';
 import TimelineContent from '@mui/lab/TimelineContent';
-import TimelineOppositeContent from '@mui/lab/TimelineOppositeContent';
 import TimelineDot from '@mui/lab/TimelineDot';
 import MouseOutlinedIcon from '@mui/icons-material/MouseOutlined';
 import CheckroomIcon from '@mui/icons-material/Checkroom';
 import AddShoppingCartIcon from '@mui/icons-material/AddShoppingCart';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+
 // Strapi response interfaces
 interface StrapiImage {
   id: number;
@@ -94,12 +97,14 @@ const App: React.FC = () => {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
-  const [WelcomeModalopen,setWelcomeModalopen]=useState(false);
+  const [WelcomeModalopen, setWelcomeModalopen] = useState(false);
+  const [sortBy, setSortBy] = useState<'name' | 'price-low' | 'price-high'>('name');
+  const [filterInStock, setFilterInStock] = useState(false);
 
-
-    const handleClickAway = () => {
+  const handleClickAway = () => {
     setIsProductModalOpen(false);
   };
+
   // Transform Strapi data to app format
   const transformStrapiData = (strapiResponse: StrapiResponse): Product[] => {
     const STRAPI_BASE_URL = 'http://localhost:1337';
@@ -166,6 +171,11 @@ const App: React.FC = () => {
   };
 
   // Load products from Strapi API
+  // Open welcome modal on component mount
+  useEffect(() => {
+    setWelcomeModalopen(true);
+  }, []);
+
   useEffect(() => {
     const loadProducts = async () => {
       try {
@@ -198,6 +208,23 @@ const App: React.FC = () => {
 
     loadProducts();
   }, []);
+
+  // Filter and sort products
+  const getFilteredAndSortedProducts = () => {
+    let filtered = filterInStock ? products.filter(p => p.stock) : products;
+    
+    return filtered.sort((a, b) => {
+      switch (sortBy) {
+        case 'price-low':
+          return a.price - b.price;
+        case 'price-high':
+          return b.price - a.price;
+        case 'name':
+        default:
+          return a.name.localeCompare(b.name);
+      }
+    });
+  };
 
   // Cart functionality
   const addToCart = (product: Product, variant: StrapiVariant | null = null, quantity: number = 1) => {
@@ -260,7 +287,6 @@ const App: React.FC = () => {
   };
 
   const handleProductClick = (product: Product) => {
-    // setIsProductModalOpen(true);
     setSelectedProduct(product);
   };
 
@@ -270,6 +296,10 @@ const App: React.FC = () => {
 
   const toggleCart = () => {
     setIsCartOpen(!isCartOpen);
+  };
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   // Loading state
@@ -296,96 +326,110 @@ const App: React.FC = () => {
     );
   }
 
+  const filteredProducts = getFilteredAndSortedProducts();
+
   // Main app render
   return (
     <div className="app-container">
+      {/* Navigation Bar */}
+      <nav className="navbar">
+        <div className="nav-content">
+          <div className="nav-links">
+            <button className="nav-link" onClick={scrollToTop}>Home</button>
+            <button className="nav-link" onClick={() => document.getElementById('products')?.scrollIntoView({ behavior: 'smooth' })}>Products</button>
+            <button className="nav-link" onClick={() => document.getElementById('footer')?.scrollIntoView({ behavior: 'smooth' })}>Contact</button>
+          </div>
+          <button className="cart-button" onClick={toggleCart}>
+            <span className="cart-icon">🛒</span>
+            {getTotalItems() > 0 && (
+              <span className="cart-badge">{getTotalItems()}</span>
+            )}
+          </button>
+        </div>
+      </nav>
+
       <header className="app-header">
         <div className="header-content">
-          <div className="header-top">
-            <h1 className="app-title">Collection</h1>
-            <button className="cart-button" onClick={toggleCart}>
-              <span className="cart-icon">🛒</span>
-              {getTotalItems() > 0 && (
-                <span className="cart-badge">{getTotalItems()}</span>
-              )}
-            </button>
-          </div>
-          <p className="app-subtitle">Curated fashion pieces</p>
+          <h1 className="app-title">Collection</h1>
+          <p className="app-subtitle">Curated fashion pieces for the modern wardrobe</p>
         </div>
       </header>
 
       <main className="main-content">
-                       <section className="timeline-section">
- <Timeline position="alternate">
-      <TimelineItem>
-        <TimelineSeparator>
-          <TimelineDot variant="outlined" color="primary">
-            <MouseOutlinedIcon />
-          </TimelineDot>
-          <TimelineConnector />
-        </TimelineSeparator>
-        <TimelineContent>Select</TimelineContent>
-      </TimelineItem>
-      <TimelineItem>
-        <TimelineSeparator>
-          <TimelineDot variant="outlined" color="secondary">
-            <CheckroomIcon />
-          </TimelineDot>
-          <TimelineConnector />
-        </TimelineSeparator>
-        <TimelineContent>Choose size</TimelineContent>
-      </TimelineItem>
-      <TimelineItem>
-        <TimelineSeparator>
-          <TimelineDot variant="outlined">
-            <AddShoppingCartIcon />
-          </TimelineDot>
-          <TimelineConnector />
-        </TimelineSeparator>
-        <TimelineContent>Add to cart</TimelineContent>
-      </TimelineItem>
-      <TimelineItem>
-        <TimelineSeparator>
-          <TimelineDot color="success">
-            <CheckCircleIcon />
-          </TimelineDot>
-        </TimelineSeparator>
-        <TimelineContent>Pay and Enjoy</TimelineContent>
-      </TimelineItem>
-    </Timeline>
-          </section>
-        <div className="products-section">
+        <div className="products-section" id="products">
           <div className="section-header">
-            <h2>Products</h2>
-            <p>{products.length} {products.length === 1 ? 'item' : 'items'}</p>
+            <div className="section-title-area">
+              <h2>Products</h2>
+              <p>{filteredProducts.length} {filteredProducts.length === 1 ? 'item' : 'items'}</p>
+            </div>
+            
+            {/* Filters and Sort */}
+            <div className="filters-controls">
+              <div className="filter-group">
+                <label className="filter-checkbox">
+                  <input
+                    type="checkbox"
+                    checked={filterInStock}
+                    onChange={(e) => setFilterInStock(e.target.checked)}
+                  />
+                  <span className="checkmark"></span>
+                  In Stock Only
+                </label>
+              </div>
+              
+              <div className="sort-group">
+                <label htmlFor="sort-select">Sort by:</label>
+                <select
+                  id="sort-select"
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+                  className="sort-select"
+                >
+                  <option value="name">Name</option>
+                  <option value="price-low">Price: Low to High</option>
+                  <option value="price-high">Price: High to Low</option>
+                </select>
+              </div>
+            </div>
           </div>
 
           <div className="product-grid">
-            {products.map((product) => (
-              <ClickAwayListener onClickAway={handleClickAway}>
+            {filteredProducts.map((product) => (
               <ProductCard
                 key={product.documentId}
                 product={product}
                 onClick={handleProductClick}
                 onAddToCart={addToCart}
               />
-              </ClickAwayListener>
             ))}
           </div>
+
+          {filteredProducts.length === 0 && !loading && (
+            <div className="no-products">
+              <p>No products match your current filters.</p>
+              <button 
+                className="clear-filters-btn"
+                onClick={() => {
+                  setSortBy('name');
+                  setFilterInStock(false);
+                }}
+              >
+                Clear Filters
+              </button>
+            </div>
+          )}
         </div>
       </main>
 
       {selectedProduct && (
-        
-        <ProductModal 
-          product={selectedProduct} 
-          onClose={handleCloseModal}
-          onAddToCart={addToCart}
-          // onClick={handleProductClick}
-          isOpen={isProductModalOpen}
-          // onClose={() => setIsProductModalOpen(false)}
-        />
-        
+        <ClickAwayListener onClickAway={handleClickAway}>
+          <ProductModal 
+            product={selectedProduct} 
+            onClose={handleCloseModal}
+            onAddToCart={addToCart}
+            isOpen={isProductModalOpen}
+          />
+        </ClickAwayListener>
       )}
 
       <Cart
@@ -397,7 +441,68 @@ const App: React.FC = () => {
         onClearCart={clearCart}
         totalPrice={getTotalPrice()}
       />
- 
+
+      <Footer />
+
+      <Modal
+        open={WelcomeModalopen}
+        onClose={() => setWelcomeModalopen(false)}
+        aria-labelledby="welcome-modal-title"
+        aria-describedby="welcome-modal-description"
+      >
+        <Box sx={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          width: 400,
+          bgcolor: 'background.paper',
+          boxShadow: 24,
+          p: 4,
+          borderRadius: 2,
+        }}>
+          <h2 id="welcome-modal-title" style={{ marginBottom: '20px', textAlign: 'center' }}>
+            How to Shop
+          </h2>
+          <Timeline position="alternate">
+            <TimelineItem>
+              <TimelineSeparator>
+                <TimelineDot variant="outlined" color="primary">
+                  <MouseOutlinedIcon />
+                </TimelineDot>
+                <TimelineConnector />
+              </TimelineSeparator>
+              <TimelineContent>Select</TimelineContent>
+            </TimelineItem>
+            <TimelineItem>
+              <TimelineSeparator>
+                <TimelineDot variant="outlined" color="secondary">
+                  <CheckroomIcon />
+                </TimelineDot>
+                <TimelineConnector />
+              </TimelineSeparator>
+              <TimelineContent>Choose size</TimelineContent>
+            </TimelineItem>
+            <TimelineItem>
+              <TimelineSeparator>
+                <TimelineDot variant="outlined">
+                  <AddShoppingCartIcon />
+                </TimelineDot>
+                <TimelineConnector />
+              </TimelineSeparator>
+              <TimelineContent>Add to cart</TimelineContent>
+            </TimelineItem>
+            <TimelineItem>
+              <TimelineSeparator>
+                <TimelineDot color="success">
+                  <CheckCircleIcon />
+                </TimelineDot>
+              </TimelineSeparator>
+              <TimelineContent>Pay and Enjoy</TimelineContent>
+            </TimelineItem>
+          </Timeline>
+        </Box>
+      </Modal>
     </div>
   );
 };
