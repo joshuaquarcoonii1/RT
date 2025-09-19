@@ -107,7 +107,7 @@ const App: React.FC = () => {
 
   // Transform Strapi data to app format
   const transformStrapiData = (strapiResponse: StrapiResponse): Product[] => {
-    const STRAPI_BASE_URL = 'http://localhost:1337';
+    const STRAPI_BASE_URL = 'https://secure-apparel-97a1e38b4b.strapiapp.com';
     
     return strapiResponse.data.map((item) => {
       // Get the best available image URL
@@ -182,7 +182,7 @@ const App: React.FC = () => {
         setLoading(true);
         setError(null);
         
-        const response = await fetch('http://localhost:1337/api/galleries?populate=*');
+        const response = await fetch('https://secure-apparel-97a1e38b4b.strapiapp.com/api/galleries?populate=*');
         
         if (!response.ok) {
           throw new Error(`Failed to fetch products (${response.status})`);
