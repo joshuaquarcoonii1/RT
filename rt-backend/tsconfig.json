@@ -1,5 +1,9 @@
 {
   "compilerOptions": {
+    "moduleResolution": "node",
+    "allowSyntheticDefaultImports": true,
+    "skipLibCheck": true,
+    "types": ["node"],
     "target": "es6",
     "module": "commonjs",
     "outDir": "./dist",

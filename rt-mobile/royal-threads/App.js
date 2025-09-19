@@ -31,8 +31,8 @@ Notifications.setNotificationHandler({
 });
 
 // Initialize Supabase (replace with your credentials)
-const supabaseUrl = 'YOUR_SUPABASE_URL';
-const supabaseAnonKey = 'YOUR_SUPABASE_ANON_KEY';
+const supabaseUrl = 'https://vwaynpocidjouvfdzaqd.supabase.co';
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ3YXlucG9jaWRqb3V2ZmR6YXFkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA5MjIxODMsImV4cCI6MjA2NjQ5ODE4M30.-uMbTL38U3KrH59_2ddaRdq730OKxo8z9UhzyUk3kVw';
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export default function App() {
