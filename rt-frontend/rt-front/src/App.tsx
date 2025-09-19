@@ -106,16 +106,19 @@ const App: React.FC = () => {
   };
 
   // Transform Strapi data to app format
-  const transformStrapiData = (strapiResponse: StrapiResponse): Product[] => {
-    const STRAPI_BASE_URL = 'https://secure-apparel-97a1e38b4b.strapiapp.com';
+ const transformStrapiData = (strapiResponse: StrapiResponse): Product[] => {
+  const STRAPI_BASE_URL = 'https://secure-apparel-97a1e38b4b.strapiapp.com';
+  return strapiResponse.data.map((item) => {
+    const primaryImage = item.image?.[0];
+    let imageUrl = 'https://via.placeholder.com/300x400?text=No+Image';
     
-    return strapiResponse.data.map((item) => {
-      // Get the best available image URL
-      const primaryImage = item.image?.[0];
-      let imageUrl = 'https://via.placeholder.com/300x400?text=No+Image';
-      
-      if (primaryImage) {
-        // Prefer medium format, then small, then original
+    if (primaryImage) {
+      // Check if URL is already absolute (from Supabase)
+      if (primaryImage.url?.startsWith('http')) {
+        imageUrl = primaryImage.url;
+      } else {
+        // Fallback to Strapi URL construction
+        const STRAPI_BASE_URL = 'https://secure-apparel-97a1e38b4b.strapiapp.com';
         if (primaryImage.formats?.medium?.url) {
           imageUrl = `${STRAPI_BASE_URL}${primaryImage.formats.medium.url}`;
         } else if (primaryImage.formats?.small?.url) {
@@ -124,6 +127,7 @@ const App: React.FC = () => {
           imageUrl = `${STRAPI_BASE_URL}${primaryImage.url}`;
         }
       }
+    }
 
       return {
         id: item.id,
