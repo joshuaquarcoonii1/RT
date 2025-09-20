@@ -104,11 +104,25 @@ export default function App() {
 
     return () => {
       subscription.unsubscribe();
-      if (notificationListener.current) {
-        Notifications.removeNotificationSubscription(notificationListener.current);
+      // remove listeners safely (newer expo-notifications returns a subscription with .remove())
+      try {
+        if (notificationListener.current && typeof notificationListener.current.remove === 'function') {
+          notificationListener.current.remove();
+        } else if (notificationListener.current && Notifications.removeNotificationSubscription) {
+          Notifications.removeNotificationSubscription(notificationListener.current);
+        }
+      } catch (e) {
+        console.warn('Failed to remove notificationListener', e);
       }
-      if (responseListener.current) {
-        Notifications.removeNotificationSubscription(responseListener.current);
+
+      try {
+        if (responseListener.current && typeof responseListener.current.remove === 'function') {
+          responseListener.current.remove();
+        } else if (responseListener.current && Notifications.removeNotificationSubscription) {
+          Notifications.removeNotificationSubscription(responseListener.current);
+        }
+      } catch (e) {
+        console.warn('Failed to remove responseListener', e);
       }
     };
   }, []);
@@ -154,7 +168,7 @@ export default function App() {
     await Notifications.scheduleNotificationAsync({
       content: {
         title: '🎉 New Order Received!',
-        body: `Order #${order.reference.slice(-6)} - GH₵${order.amount.toFixed(2)}`,
+  body: `Order #${(order.reference || '').slice(-6)} - GH₵${(order.amount || 0).toFixed(2)}`,
         data: { orderId: order.id },
         sound: true,
       },
@@ -234,9 +248,9 @@ export default function App() {
 
   const filteredOrders = orders.filter(order => {
     const matchesSearch = 
-      order.reference.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.customer_name?.toLowerCase().includes(searchQuery.toLowerCase());
+      (order.reference || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (order.email || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (order.customer_name || '').toLowerCase().includes(searchQuery.toLowerCase());
     
     const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
     
@@ -254,9 +268,9 @@ export default function App() {
     >
       <View style={styles.orderHeader}>
         <View style={styles.orderInfo}>
-          <Text style={styles.orderReference}>#{order.reference.slice(-6)}</Text>
+          <Text style={styles.orderReference}>#{(order.reference || '').slice(-6)}</Text>
           <Text style={styles.orderDate}>
-            {new Date(order.created_at).toLocaleString()}
+            {order.created_at ? new Date(order.created_at).toLocaleString() : 'N/A'}
           </Text>
         </View>
         <View style={[styles.statusBadge, { backgroundColor: getStatusColor(order.status) }]}>
@@ -266,9 +280,9 @@ export default function App() {
       </View>
       
       <View style={styles.orderBody}>
-        <Text style={styles.customerName}>{order.customer_name || 'Guest'}</Text>
-        <Text style={styles.orderAmount}>GH₵{order.amount.toFixed(2)}</Text>
-        <Text style={styles.itemCount}>{order.items.length} items</Text>
+  <Text style={styles.customerName}>{order.customer_name || 'Guest'}</Text>
+  <Text style={styles.orderAmount}>GH₵{((order.amount || 0)).toFixed(2)}</Text>
+  <Text style={styles.itemCount}>{(order.items || []).length} items</Text>
       </View>
 
       {order.status === 'paid' && (
@@ -306,16 +320,16 @@ export default function App() {
             <ScrollView style={styles.modalBody}>
               <View style={styles.detailSection}>
                 <Text style={styles.sectionTitle}>Order Information</Text>
-                <Text style={styles.detailText}>Reference: #{selectedOrder.reference.slice(-6)}</Text>
-                <Text style={styles.detailText}>Date: {new Date(selectedOrder.created_at).toLocaleString()}</Text>
-                <Text style={styles.detailText}>Status: {selectedOrder.status}</Text>
-                <Text style={styles.detailText}>Amount: GH₵{selectedOrder.amount.toFixed(2)}</Text>
+                <Text style={styles.detailText}>Reference: #{(selectedOrder.reference || '').slice(-6)}</Text>
+                <Text style={styles.detailText}>Date: {selectedOrder.created_at ? new Date(selectedOrder.created_at).toLocaleString() : 'N/A'}</Text>
+                <Text style={styles.detailText}>Status: {selectedOrder.status || 'N/A'}</Text>
+                <Text style={styles.detailText}>Amount: GH₵{((selectedOrder.amount || 0)).toFixed(2)}</Text>
               </View>
 
               <View style={styles.detailSection}>
                 <Text style={styles.sectionTitle}>Customer Information</Text>
                 <Text style={styles.detailText}>Name: {selectedOrder.customer_name || 'N/A'}</Text>
-                <Text style={styles.detailText}>Email: {selectedOrder.email}</Text>
+                <Text style={styles.detailText}>Email: {selectedOrder.email || 'N/A'}</Text>
                 <Text style={styles.detailText}>Phone: {selectedOrder.customer_phone || 'N/A'}</Text>
                 <Text style={styles.detailText}>Delivery: {selectedOrder.delivery_method}</Text>
                 {selectedOrder.delivery_address && (
@@ -325,14 +339,14 @@ export default function App() {
 
               <View style={styles.detailSection}>
                 <Text style={styles.sectionTitle}>Order Items</Text>
-                {selectedOrder.items.map((item, index) => (
+                {(selectedOrder.items || []).map((item, index) => (
                   <View key={index} style={styles.itemDetail}>
-                    <Text style={styles.itemName}>{item.product.name}</Text>
+                    <Text style={styles.itemName}>{(item.product && item.product.name) || 'Product'}</Text>
                     {item.variant && (
                       <Text style={styles.itemVariant}>Size: {item.variant.Size}</Text>
                     )}
                     <Text style={styles.itemQuantity}>
-                      {item.quantity} x GH₵{item.price.toFixed(2)} = GH₵{(item.quantity * item.price).toFixed(2)}
+                      {item.quantity} x GH₵{((item.price || 0)).toFixed(2)} = GH₵{((item.quantity || 0) * (item.price || 0)).toFixed(2)}
                     </Text>
                   </View>
                 ))}

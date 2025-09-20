@@ -9,12 +9,8 @@ dotenv.config();
 
 const app = express();
 app.use(cors());
-// Use JSON parser for regular routes
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
-
-// For Paystack webhooks we need the raw body to verify signature
-app.use('/api/paystack/webhook', express.raw({ type: '*/*' }));
 
 const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY;
 const PAYSTACK_BASE_URL = 'https://api.paystack.co';
@@ -24,34 +20,6 @@ const supabaseUrl = process.env.SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!; // Use service key for backend
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-/**
- * This server connects to a Supabase database.
- * It expects an 'orders' table to exist, which can be created
- * using the schema defined in 'schema.sql'.
- */
-
-// Interface defining the structure of an Order for type safety.
-// This should match the columns in your 'orders' table in Supabase.
-interface Order {
-  id?: number;
-  created_at?: string;
-  transaction_id: number;
-  reference: string;
-  email: string | null;
-  amount: number;
-  status: 'paid' | 'shipped' | 'delivered' | 'cancelled'; // Extend with any other statuses you use
-  items: any[]; // You can define a more specific type for items if needed
-  customer_name: string | null;
-  customer_phone: string | null;
-  delivery_address: string | null;
-  delivery_method: string;
-  payment_method: string;
-  paid_at: string;
-  raw_payload: any;
-  updated_at?: string;
-}
-
-
 // Initialize Paystack transaction
 app.post('/api/paystack/initialize', async (req, res) => {
   try {
@@ -60,8 +28,8 @@ app.post('/api/paystack/initialize', async (req, res) => {
     const response = await axios.post(
       `${PAYSTACK_BASE_URL}/transaction/initialize`,
       {
-        email:'joshuaquarcoonii1@gmail.com',
-        amount: amount * 100, // Convert to GHS
+        email,
+        amount: amount * 100, // Convert to pesewas
         metadata: {
           ...metadata,
           custom_fields: [
@@ -90,78 +58,51 @@ app.post('/api/paystack/initialize', async (req, res) => {
 // Paystack webhook endpoint
 app.post('/api/paystack/webhook', async (req, res) => {
   try {
-    const rawBody = req.body as Buffer;
-    const computedHash = require('crypto')
+    const hash = require('crypto')
       .createHmac('sha512', PAYSTACK_SECRET_KEY!)
-      .update(rawBody)
+      .update(JSON.stringify(req.body))
       .digest('hex');
-
-    const signature = (req.headers['x-paystack-signature'] || '') as string;
-    if (computedHash !== signature) {
-      console.warn('Invalid webhook signature', { computedHash, signature });
+    
+    if (hash !== req.headers['x-paystack-signature']) {
       return res.status(401).json({ error: 'Invalid signature' });
     }
 
-    const parsed = JSON.parse(rawBody.toString('utf8'));
-    const { event, data } = parsed;
+    const { event, data } = req.body;
 
     if (event === 'charge.success') {
-      const reference = data.reference;
-
-      // Check idempotency: if an order with this reference already exists, skip
-      const { data: existingOrders, error: fetchError } = await supabase
-        .from('orders')
-        .select('reference')
-        .eq('reference', reference)
-        .limit(1);
-
-      if (fetchError) {
-        console.error('Error checking existing order:', fetchError);
-        return res.status(500).json({ error: 'Failed to verify order' });
-      }
-
-      if (existingOrders && existingOrders.length > 0) {
-        console.log('Order with reference already exists, skipping insert:', reference);
-        return res.status(200).json({ received: true, skipped: true });
-      }
-
-      // Parse items from metadata if present
-      let items = [];
-      try {
-        const field = data.metadata?.custom_fields?.find((f: any) => f.variable_name === 'order_items');
-        if (field && field.value) items = JSON.parse(field.value);
-      } catch (err) {
-        console.warn('Failed to parse order items from metadata', err);
-      }
-
-      const orderData: Omit<Order, 'id' | 'created_at' | 'updated_at'> = {
+      // Create order in Supabase
+      const orderData = {
         transaction_id: data.id,
-        reference,
-        email: data.customer?.email || null,
-        amount: (data.amount || 0) / 100, // Convert from pesewas
+        reference: data.reference,
+        email: data.customer.email,
+        amount: data.amount / 100, // Convert back to GHS
         status: 'paid',
-        items,
-        customer_name: data.metadata?.customer_name || null,
-        customer_phone: data.metadata?.customer_phone || null,
-        delivery_address: data.metadata?.delivery_address || null,
+        items: data.metadata?.custom_fields?.find(
+          (field: any) => field.variable_name === 'order_items'
+        )?.value ? JSON.parse(data.metadata.custom_fields.find(
+          (field: any) => field.variable_name === 'order_items'
+        ).value) : [],
+        customer_name: data.metadata?.customer_name || '',
+        customer_phone: data.metadata?.customer_phone || '',
+        delivery_address: data.metadata?.delivery_address || '',
         delivery_method: data.metadata?.delivery_method || 'pickup',
         payment_method: 'paystack',
         paid_at: new Date().toISOString(),
-        raw_payload: parsed,
       };
 
-      const { data: order, error: insertError } = await supabase
+      const { data: order, error } = await supabase
         .from('orders')
         .insert([orderData])
         .select()
         .single();
 
-      if (insertError) {
-        console.error('Error creating order:', insertError);
+      if (error) {
+        console.error('Error creating order:', error);
         return res.status(500).json({ error: 'Failed to create order' });
       }
 
-      console.log('Order created successfully:', order.id);
+      // The real-time subscription in the mobile app will automatically receive this
+      console.log('Order created successfully:', order);
     }
 
     res.status(200).json({ received: true });
@@ -192,10 +133,6 @@ app.patch('/api/orders/:id/status', async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
-
-    if (!status) {
-        return res.status(400).json({ error: 'Status is required' });
-    }
 
     const { data, error } = await supabase
       .from('orders')
