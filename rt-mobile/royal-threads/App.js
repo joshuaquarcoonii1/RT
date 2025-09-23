@@ -208,6 +208,8 @@ export default function App() {
         updateData.processed_at = new Date().toISOString();
       } else if (newStatus === 'delivered') {
         updateData.delivered_at = new Date().toISOString();
+      } else if (newStatus === 'ready') {
+        updateData.ready_at = new Date().toISOString();
       }
 
       const { error } = await supabase
