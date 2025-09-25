@@ -183,6 +183,26 @@ body {
   text-align: center;
 }
 
+.header-inner {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  justify-content: center;
+}
+
+.header-brand {
+  flex-shrink: 0;
+}
+
+.logo-img {
+  width: 72px;
+  height: 72px;
+  border-radius: 9999px; /* full round */
+  object-fit: cover;
+  border: 2px solid rgba(255,255,255,0.6);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
 .app-title {
   font-size: 3rem;
   font-weight: 300;

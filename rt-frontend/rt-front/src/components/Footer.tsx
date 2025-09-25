@@ -60,7 +60,7 @@ const Footer: React.FC = () => {
                 className="social-link instagram"
                 aria-label="Follow us on Instagram"
               >
-                📷
+                📸
               </a>
               <a 
                 href="https://facebook.com/yourcollection" 

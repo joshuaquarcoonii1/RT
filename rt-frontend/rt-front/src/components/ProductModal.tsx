@@ -73,7 +73,10 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, onClose, onAddToCa
     setSelectedVariant(variant);
   };
 
-  const images = product.allImages.length > 0 ? product.allImages : [{ url: product.image }];
+  // Ensure every image object has a string `url` (fallback to product.image)
+  const images = (product.allImages && product.allImages.length > 0)
+    ? product.allImages.map(img => ({ ...img, url: img.url || product.image }))
+    : [{ url: product.image }];
 
   return (
     <>
@@ -242,7 +245,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, onClose, onAddToCa
           padding: 8px 16px;
           border: 2px solid #e2e8f0;
           border-radius: 6px;
-          background: white;
+          background: black;
           cursor: pointer;
           font-size: 14px;
           font-weight: 500;
@@ -250,7 +253,8 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, onClose, onAddToCa
         }
 
         .variant-button:hover {
-          border-color: #cbd5e0;
+          border-color: #0a7ffcff;
+          background: black;
         }
 
         .variant-button.selected {
@@ -287,9 +291,9 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, onClose, onAddToCa
         .quantity-button {
           width: 40px;
           height: 40px;
-          border: 1px solid #e2e8f0;
+          border: 1px solid #060606ff;
           border-radius: 6px;
-          background: white;
+          background: black;
           cursor: pointer;
           font-size: 18px;
           font-weight: 600;
@@ -300,8 +304,8 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, onClose, onAddToCa
         }
 
         .quantity-button:hover {
-          background: #f7fafc;
-          border-color: #cbd5e0;
+          background: #0d0e0eff;
+          border-color: #0a0a0aff;
         }
 
         .quantity-button:disabled {
@@ -401,7 +405,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, onClose, onAddToCa
             {/* Left side - Images */}
             <div className="modal-images">
               <div className="main-image">
-                <img src={images[currentImageIndex].url} alt={product.name} />
+                <img src={images[currentImageIndex]?.url || product.image} alt={product.name} />
               </div>
               
               {images.length > 1 && (
@@ -412,7 +416,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, onClose, onAddToCa
                       className={`thumbnail ${index === currentImageIndex ? 'active' : ''}`}
                       onClick={() => setCurrentImageIndex(index)}
                     >
-                      <img src={image.url} alt={`${product.name} thumbnail ${index + 1}`} />
+                      <img src={image.url || product.image} alt={`${product.name} thumbnail ${index + 1}`} />
                     </button>
                   ))}
                 </div>

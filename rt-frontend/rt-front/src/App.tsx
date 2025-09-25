@@ -139,37 +139,44 @@ const App: React.FC = () => {
         stock: item.Stock,
         variants: item.Varients || [],
         slug: item.Slug,
-        allImages: item.image?.map(img => ({
-          ...img,
-          url: `${STRAPI_BASE_URL}${img.url}`,
-          formats: img.formats ? {
+        allImages: item.image?.map(img => {
+          const resolvedUrl = img.url
+            ? (img.url.startsWith('http') ? img.url : `${STRAPI_BASE_URL}${img.url}`)
+            : 'https://via.placeholder.com/300x400?text=No+Image';
+          const formats = img.formats ? {
             ...img.formats,
             ...(img.formats.thumbnail && { 
               thumbnail: { 
                 ...img.formats.thumbnail, 
-                url: `${STRAPI_BASE_URL}${img.formats.thumbnail.url}` 
+                url: img.formats.thumbnail.url && img.formats.thumbnail.url.startsWith('http') ? img.formats.thumbnail.url : `${STRAPI_BASE_URL}${img.formats.thumbnail.url}` 
               } 
             }),
             ...(img.formats.small && { 
               small: { 
                 ...img.formats.small, 
-                url: `${STRAPI_BASE_URL}${img.formats.small.url}` 
+                url: img.formats.small.url && img.formats.small.url.startsWith('http') ? img.formats.small.url : `${STRAPI_BASE_URL}${img.formats.small.url}` 
               } 
             }),
             ...(img.formats.medium && { 
               medium: { 
                 ...img.formats.medium, 
-                url: `${STRAPI_BASE_URL}${img.formats.medium.url}` 
+                url: img.formats.medium.url && img.formats.medium.url.startsWith('http') ? img.formats.medium.url : `${STRAPI_BASE_URL}${img.formats.medium.url}` 
               } 
             }),
             ...(img.formats.large && { 
               large: { 
                 ...img.formats.large, 
-                url: `${STRAPI_BASE_URL}${img.formats.large.url}` 
+                url: img.formats.large.url && img.formats.large.url.startsWith('http') ? img.formats.large.url : `${STRAPI_BASE_URL}${img.formats.large.url}` 
               } 
             }),
-          } : undefined
-        })) || []
+          } : undefined;
+
+          return {
+            ...img,
+            url: resolvedUrl,
+            formats
+          };
+        }) || []
       };
     });
   };
@@ -354,8 +361,15 @@ const App: React.FC = () => {
 
       <header className="app-header">
         <div className="header-content">
-          <h1 className="app-title">Collection</h1>
-          <p className="app-subtitle">Curated fashion pieces for the modern wardrobe</p>
+          <div className="header-inner">
+            <div className="header-brand">
+              <img src="../public/rt.jpg" alt="Royal Threads logo" className="logo-img" />
+            </div>
+            <div>
+              <h1 className="app-title">Colours of Royal Threads</h1>
+              <p className="app-subtitle">Curated fashion pieces for the modern wardrobe</p>
+            </div>
+          </div>
         </div>
       </header>
 
